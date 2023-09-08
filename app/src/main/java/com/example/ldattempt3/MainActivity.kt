@@ -1,79 +1,55 @@
 package com.example.ldattempt3
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.Context
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
-import android.os.PowerManager
 import android.util.Log
 import android.view.View
-import android.view.WindowManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.ldattempt3.ui.theme.LDAttempt3Theme
 
+
 class MainActivity : ComponentActivity() {
-    private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var webView: WebView
-
-    inner class TestStep(private val context: Context) : SensorEventListener {
-        private var test = 0
-        override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
-            println("sensor: ${sensor}, accuracy: ${accuracy}")
-        }
-
-        override fun onSensorChanged(event: SensorEvent) {
-            if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
-                val x = event.values[0] * event.values[0] +
-                        event.values[1] * event.values[1] +
-                        event.values[2] * event.values[2] - 96.2361 // 9.81**2
-                if (x > 7.0) {
-                    webView.evaluateJavascript(
-                        "set_movement_t_now(${x});",
-                        null
-                    )
-                }
-            }
-        }
-
-        fun registerSensor() {
-            val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-            val stepDetectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-            sensorManager.registerListener(
-                this,
-                stepDetectorSensor,
-                SensorManager.SENSOR_DELAY_NORMAL
-            )
-        }
-
-        fun unregisterSensor() {
-            val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-            sensorManager.unregisterListener(this)
-        }
-    }
-
     override fun onDestroy(){
         super.onDestroy()
-        wakeLock.release()
+        val accelerometerServiceIntent = Intent(this, AccelerometerService::class.java)
+        stopService(accelerometerServiceIntent)
     }
+
+    private val broadcastReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val data = intent.getStringExtra("someKey")
+            if (data != null) {
+                webView.evaluateJavascript(
+                    data,
+                    null
+                )
+            }
+            //do your coding here using intent
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        // Acquire a partial WakeLock to keep the CPU awake
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "YourApp:WakeLockTag")
-        wakeLock.acquire()
+        val channel = NotificationChannel(
+            "SOME_CHANNEL_ID",
+            "Some Channel Name",
+            NotificationManager.IMPORTANCE_DEFAULT
+        )
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.createNotificationChannel(channel)
 
         // doesnt do shit (I want fullscreen):  window.attributes.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         webView = WebView(this)
@@ -93,12 +69,13 @@ class MainActivity : ComponentActivity() {
 <head>
 	<title>Lucid Dreaming Audio</title>
 	<meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <meta http-equiv="Access-Control-Allow-Origin" content="http://192.168.0.12:8080"/>
 <style>input{width:100vw;}body{background:black;color:white;}*{margin:0;padding:0;}.blackout{width:100vw;height:100vh;}</style>
 </head>
 <body>
 	<div class="blackout" id="blackout"></div>
 	<div id="errors_container"></div>
-	<input id="rooturl_input" type="text" placeholder="http://192.168.0.123"/>
+	<input id="rooturl_input" type="text" value="http://192.168.0.12:8080" placeholder="http://192.168.0.123"/>
 	<label for="rooturl_input">Root URL</label>
 	<audio id="bg_audio" controls loop>
 		<source id="bg_audio_source" src="data:," type="audio/webm"></source>
@@ -186,7 +163,7 @@ fg_audio.addEventListener("error", e=>{
 function maybe_select_and_play_next_audio(){
 	if (should_select_and_play_next_audio){
 		let mediaindx = 0;
-		
+
 		if (is_playing_playlist === 10){
 			const indx = tagid2audioindices[is_playing_playlist].indexOf(prev_mediaindx) + 1;
 			if (indx === tagid2audioindices[is_playing_playlist].length){
@@ -195,11 +172,11 @@ function maybe_select_and_play_next_audio(){
 				mediaindx = tagid2audioindices[is_playing_playlist][indx];
 			}
 		}
-		
+
 		const t = new Date().valueOf();
-		
+
 		if (mediaindx === 0){
-		
+
 		let option_indices = [4,11];
 		const t_diff = t - last_movement_at_t;
 		if (t_diff > 3600000){ // 1 hour
@@ -208,26 +185,26 @@ function maybe_select_and_play_next_audio(){
 		if (t_diff > 7200000){ // 2 hours
 			option_indices.push(3,10);
 		}
-		
+
 		const tagid = option_indices[parseInt(option_indices.length*Math.random())];
-		
+
 		if (tagid === 10){
 			is_playing_playlist = tagid;
 			mediaindx = tagid2audioindices[is_playing_playlist][0];
 		}
-		
+
 		const ls = tagid2audioindices[tagid];
-		
+
 		do {
 			mediaindx = ls[parseInt(ls.length*Math.random())];
 		} while (mediaindx === prev_mediaindx);
-		
+
 		}
-		
+
 		prev_mediaindx = mediaindx;
-		
-		fetch(`${'$'}{rooturl_input.value}/ld.html`, {credentials:"include", method:"POST", body:JSON.stringify([1,t,`${'$'}{audios[mediaindx]} ${'$'}{audio_offsets[mediaindx]}-${'$'}{audio_endats[mediaindx]}`])});
-		
+
+		fetch(`${'$'}{rooturl_input.value}/ld.html`, {credentials:"include", method:"POST", mode:'no-cors', body:JSON.stringify([1,t,`${'$'}{audios[mediaindx]} ${'$'}{audio_offsets[mediaindx]}-${'$'}{audio_endats[mediaindx]}`])});
+
 		setTimeout(()=>play_nth_audio(mediaindx), 500);
 	}
 }
@@ -277,15 +254,15 @@ function addaudio_from_url(tagsid, relative_volume, has_video, mimetype, url, de
 	const newcontainer = document.createElement("div");
 	const name = document.createElement("h3");
 	const newcontrols  = document.createElement("div");
-	
+
 	if (namestr === "")
 		namestr = "[Untitled]";
 	name.innerText = namestr;
-	
+
 	const playbtn = document.createElement("button");
 	playbtn.innerText = "Play";
 	playbtn.addEventListener("pointerup", playthisaudio);
-	
+
 	{
 	const label1 = document.createElement("label");
 	label1.innerText = "Delay";
@@ -302,7 +279,7 @@ function addaudio_from_url(tagsid, relative_volume, has_video, mimetype, url, de
 	newcontrols.appendChild(setdelay);
 	newcontrols.appendChild(valuedisplay);
 	}
-	
+
 	{
 	const label1 = document.createElement("label");
 	label1.innerText = "Offset";
@@ -316,7 +293,7 @@ function addaudio_from_url(tagsid, relative_volume, has_video, mimetype, url, de
 	newcontrols.appendChild(setdelay);
 	newcontrols.appendChild(valuedisplay);
 	}
-	
+
 	{
 	const label1 = document.createElement("label");
 	label1.innerText = "End at";
@@ -330,10 +307,10 @@ function addaudio_from_url(tagsid, relative_volume, has_video, mimetype, url, de
 	newcontrols.appendChild(setdelay);
 	newcontrols.appendChild(valuedisplay);
 	}
-	
+
 	newcontainer.appendChild(name);
 	newcontainer.appendChild(playbtn);
-	
+
 	newcontainer.dataset.indx = audios.length;
 	audio_delays.push(1000 * delay);
 	audio_offsets.push(beginat);
@@ -372,14 +349,14 @@ function addaudio_from_url(tagsid, relative_volume, has_video, mimetype, url, de
 	audio_mimetypes.push(mimetype);
 	audios.push(url);
 	timeoutids.push(0,0);
-	
+
 	newcontainer.appendChild(newcontrols);
 	if (tagsid !== 0){
 		for (let tagid of tagsid2classnames[tagsid]){
 			newcontainer.classList.add(`tag_${'$'}{tagid2classname[tagid]}`);
 		}
 	}
-	
+
 	audios_container.appendChild(newcontainer);
 }
 const addaudio_from_url__queue = [];
@@ -476,7 +453,7 @@ document.getElementById("bg_audio_volume").addEventListener("change", e=>{
 var last_movement_at_t = new Date().valueOf();
 function set_movement_t_now(distance){
 	last_movement_at_t = new Date().valueOf();
-	fetch(`${'$'}{rooturl_input.value}/ld.html`, {credentials:"include", method:"POST", body:`[2,${'$'}{last_movement_at_t},${'$'}{distance}]`});
+	fetch(`${'$'}{rooturl_input.value}/ld.html`, {credentials:"include", method:"POST", mode:'no-cors', body:`[2,${'$'}{last_movement_at_t},${'$'}{distance}]`});
 }
 
 if (true){ // space-lecture
@@ -564,35 +541,16 @@ addaudio_from_url__queued(9, 58.761837005615234, 0, "audio/mpeg", `/ld.html/audi
 </body>
 </html>""", "text/html", "UTF-8"
             )
-
-            val movementDetector = object : SensorEventListener {
-                override fun onSensorChanged(sensorEvent: SensorEvent) {
-                    if (sensorEvent != null) {
-                        val x = sensorEvent.values[0] * sensorEvent.values[0] +
-                                sensorEvent.values[1] * sensorEvent.values[1] +
-                                sensorEvent.values[2] * sensorEvent.values[2] - 96.2361 // 9.81**2
-                        if (x > 7.0) {
-                            webView.evaluateJavascript(
-                                "set_movement_t_now(${x});",
-                                null
-                            )
-                        }
-                    }
-                }
-
-                override fun onAccuracyChanged(sensor: Sensor, accuract: Int) {
-
-                }
-            }
-            val sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-            val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-            sensorManager.registerListener(movementDetector, sensor, SensorManager.SENSOR_DELAY_NORMAL)
         } else {
             Log.e("WebViewInitError", "WebView not found in layout")
         }
         setContentView(webView)
-        val testStep = TestStep(this)
-        testStep.registerSensor()
+
+        val accelerometerServiceIntent = Intent(this, AccelerometerService::class.java)
+        startService(accelerometerServiceIntent)
+        val filter = IntentFilter("SOME_ACTION")
+        //filter.addCategory(Intent.CATEGORY_DEFAULT)
+        registerReceiver(broadcastReceiver, filter)
     }
 }
 
