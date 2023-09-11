@@ -1,5 +1,6 @@
 package com.example.ldattempt3
 
+import android.R
 import android.app.AlertDialog
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -10,6 +11,7 @@ import android.content.IntentFilter
 import android.os.Bundle
 import android.text.InputType
 import android.util.Log
+import android.view.ContextThemeWrapper
 import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -20,7 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.ldattempt3.ui.theme.LDAttempt3Theme
-
+import com.example.ldattempt3.R.style.AlertDialogTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
@@ -66,10 +68,12 @@ class MainActivity : ComponentActivity() {
             webView.settings.loadWithOverviewMode = true
             webView.settings.useWideViewPort = true
             //WebView.setWebContentsDebuggingEnabled(true) // allows Chrome dev tools from PC
-            val builder = AlertDialog.Builder(this)
+            val themedContext = ContextThemeWrapper(this, AlertDialogTheme)
+            val builder = AlertDialog.Builder(themedContext)
             builder.setTitle("URL")
             val input = EditText(this)
             input.inputType = InputType.TYPE_CLASS_TEXT
+            input.setTextColor(getResources().getColor(android.R.color.white))
             input.setText("http://192.168.0.12:8080/ld.html.android")
             builder.setView(input)
             builder.setPositiveButton(
