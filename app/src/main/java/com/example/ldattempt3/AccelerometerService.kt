@@ -49,7 +49,6 @@ class AccelerometerService : Service(), SensorEventListener {
                 Log.e(TAG, "Accelerometer sensor not available on this device.")
                 stopSelf()
             } else {
-                Log.e(TAG, "Accelerometer service onCreate() called")
                 val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
                 wakeLock = powerManager.newWakeLock(
                     PowerManager.PARTIAL_WAKE_LOCK,
@@ -83,8 +82,6 @@ class AccelerometerService : Service(), SensorEventListener {
             val pendingIntent = PendingIntent.getActivity(
                 this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE
             )
-
-            Log.e(TAG, "createNoticication()")
 
             return Notification.Builder(this, "SOME_CHANNEL_ID")
                 .setContentTitle("Accelerometer Service")
