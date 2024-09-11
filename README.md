@@ -13,4 +13,4 @@ Features:
 * You can randomise playlists (from a whitelist) or play a specific playlist
 
 Future features:
-[] Fully native Android app, which would allow you to use any audio files that are on your phone
+* Fully native Android app, which would allow you to use any audio files that are on your phone
